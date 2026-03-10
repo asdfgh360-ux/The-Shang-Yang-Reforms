@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商鞅变法 - 秦国改革模拟（升级版）</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "SimHei", "Microsoft YaHei", sans-serif;
+        }
+        
+        body {
+            background-color: #f5f0e6;
+            color: #333;
+            line-height: 1.6;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f5f0e6"/><path d="M0 0L100 100M100 0L0 100" stroke="%23e0d8c8" stroke-width="0.5"/></svg>');
+            background-size: 50px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 30px auto;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 0 25px rgba(0,0,0,0.15);
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* 古风装饰 */
+        .container::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 8px;
+            background: linear-gradient(90deg, #8b0000, #a02020, #8b0000);
+        }
+        
+        .game-header {
+            background-color: #8b0000;
+            color: #fff;
+            padding: 25px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .game-header h1 {
+            font-size: 32px;
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .game-header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        /* 状态面板优化 - 进度条可视化 */
+        .status-panel {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+            background-color: #f8f3e9;
+            border-bottom: 3px solid #8b0000;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .status-item {
+            flex: 1;
+            min-width: 180px;
+            text-align: center;
+        }
+        
+        .status-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .status-bar {
+            height: 20px;
+            background-color: #eee;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 5px;
+            border: 1px solid #ddd;
+        }
+        
+        .status-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+            border-radius: 9px;
+        }
+        
+        .fill-popularity {
+            background: linear-gradient(90deg, #4CAF50, #81C784);
+        }
+        
+        .fill-national {
+            background: linear-gradient(90deg, #2196F3, #64B5F6);
+        }
+        
+        .fill-noble {
+            background: linear-gradient(90deg, #FFC107, #FFD54F);
+        }
+        
+        .fill-military {
+            background: linear-gradient(90deg, #F44336, #EF5350);
+        }
+        
+        .status-value {
+            font-size: 22px;
+            font-weight: bold;
+            color: #8b0000;
+        }
+        
+        /* 隐藏数值：秦孝公信任度 */
+        .trust-status {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 14px;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 15px;
+        }
+        
+        .game-content {
+            padding: 35px;
+            min-height: 350px;
+            position: relative;
+        }
+        
+        .story-text {
+            font-size: 19px;
+            margin-bottom: 30px;
+            line-height: 1.8;
+            background-color: #faf7f0;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #8b0000;
+        }
+        
+        .choice-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .choice-btn {
+            padding: 18px 20px;
+            background: linear-gradient(180deg, #e8d8b8, #d4b98c);
+            border: none;
+            border-radius: 10px;
+            font-size: 17px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+            border-left: 5px solid #8b0000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .choice-btn:hover {
+            background: linear-gradient(180deg, #d4b98c, #c0a070);
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .choice-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        /* 结果框优化 */
+        .result-box {
+            margin-top: 20px;
+            padding: 20px;
+            background: linear-gradient(180deg, #f0e6d2, #e8d8b8);
+            border-radius: 10px;
+            display: none;
+            border: 1px solid #d4b98c;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* 历史知识弹窗 */
+        .history-tip {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #2196F3;
+            font-size: 14px;
+            color: #333;
+        }
+        
+        .history-tip h4 {
+            color: #2196F3;
+            margin-bottom: 5px;
+            font-size: 15px;
+        }
+        
+        .next-btn, .continue-btn {
+            margin-top: 20px;
+            padding: 14px 28px;
+            background: linear-gradient(180deg, #8b0000, #6a0000);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 17px;
+            cursor: pointer;
+            display: none;
+            transition: all 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .next-btn:hover, .continue-btn:hover {
+            background: linear-gradient(180deg, #a00000, #7a0000);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+        }
+        
+        /* 随机事件弹窗 */
+        .random-event {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.3);
+            z-index: 1000;
+            max-width: 600px;
+            width: 90%;
+            display: none;
+        }
+        
+        .random-event h3 {
+            color: #8b0000;
+            margin-bottom: 15px;
+            font-size: 20px;
+            text-align: center;
+        }
+        
+        .random-event p {
+            margin-bottom: 20px;
+            line-height: 1.7;
+        }
+        
+        .event-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .event-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+        
+        /* 游戏结束界面优化 */
+        .game-over {
+            display: none;
+            text-align: center;
+            padding: 60px 40px;
+            background: linear-gradient(180deg, #f8f3e9, #fff);
+        }
+        
+        .game-over h2 {
+            font-size: 36px;
+            color: #8b0000;
+            margin-bottom: 15px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .end-score {
+            font-size: 20px;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f0e6d2;
+            border-radius: 8px;
+            display: inline-block;
+        }
+        
+        .end-text {
+            font-size: 18px;
+            line-height: 1.8;
+            margin-bottom: 30px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .restart-btn {
+            padding: 18px 36px;
+            background: linear-gradient(180deg, #8b0000, #6a0000);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 19px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+        }
+        
+        .restart-btn:hover {
+            background: linear-gradient(180deg, #a00000, #7a0000);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 12px rgba(0,0,0,0.25);
+        }
+        
+        /* 响应式适配 */
+        @media (max-width: 768px) {
+            .status-panel {
+                padding: 15px;
+            }
+            
+            .game-content {
+                padding: 20px;
+            }
+            
+            .game-header h1 {
+                font-size: 26px;
+            }
+            
+            .story-text {
+                font-size: 17px;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="game-header">
+            <h1>商鞅变法</h1>
+            <p>秦国改革模拟 - 富国强兵之路</p>
+            <div class="trust-status">秦孝公信任度: <span id="trust-value">80</span></div>
+        </div>
+        
+        <div class="status-panel">
+            <div class="status-item">
+                <div class="status-label">民心</div>
+                <div class="status-bar">
+                    <div class="status-fill fill-popularity" id="popularity-bar"></div>
+                </div>
+                <div class="status-value" id="popularity">50</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">国力</div>
+                <div class="status-bar">
+                    <div class="status-fill fill-national" id="national-power-bar"></div>
+                </div>
+                <div class="status-value" id="national-power">30</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">贵族满意度</div>
+                <div class="status-bar">
+                    <div class="status-fill fill-noble" id="noble-satisfaction-bar"></div>
+                </div>
+                <div class="status-value" id="noble-satisfaction">70</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">军队战斗力</div>
+                <div class="status-bar">
+                    <div class="status-fill fill-military" id="military-bar"></div>
+                </div>
+                <div class="status-value" id="military">40</div>
+            </div>
+        </div>
+        
+        <div class="game-content" id="game-content">
+            <div class="story-text" id="story-text">
+                公元前359年，你（商鞅）来到秦国，秦孝公渴望变法图强，召见了你。你需要向秦孝公阐述变法主张，你会选择：
+            </div>
+            
+            <div class="choice-buttons" id="choice-buttons">
+                <button class="choice-btn" data-choices="1">
+                    主张激进改革，全面废除旧制，彻底推行新法
+                </button>
+                <button class="choice-btn" data-choices="2">
+                    主张温和改革，循序渐进，先易后难
+                </button>
+                <button class="choice-btn" data-choices="3">
+                    先解决军事问题，优先推行军功爵制
+                </button>
+            </div>
+            
+            <div class="result-box" id="result-box"></div>
+            <button class="next-btn" id="next-btn">继续推进变法</button>
+        </div>
+        
+        <div class="game-over" id="game-over">
+            <h2 id="end-title">变法失败</h2>
+            <div class="end-score" id="end-score">总分：0</div>
+            <p id="end-text">你未能平衡各方利益，商鞅被车裂，新法被废</p>
+            <button class="restart-btn" id="restart-btn">重新开始</button>
+        </div>
+    </div>
+
+    <!-- 随机事件弹窗 -->
+    <div class="overlay" id="overlay"></div>
+    <div class="random-event" id="random-event">
+        <h3 id="event-title">突发事件</h3>
+        <p id="event-text">这是一个随机事件描述</p>
+        <div class="event-buttons">
+            <button class="event-btn" id="event-btn1" style="background-color: #4CAF50; color: white;">方案一</button>
+            <button class="event-btn" id="event-btn2" style="background-color: #2196F3; color: white;">方案二</button>
+            <button class="event-btn" id="event-btn3" style="background-color: #FFC107; color: #333;">方案三</button>
+        </div>
+    </div>
+
+    <script>
+        // 游戏状态管理（升级版）
+        const gameState = {
+            stage: 1,
+            stats: {
+                popularity: 50,       // 民心
+                nationalPower: 30,    // 国力
+                nobleSatisfaction: 70,// 贵族满意度
+                military: 40,         // 军队战斗力
+                trust: 80             // 秦孝公信任度（隐藏数值）
+            },
+            // 核心剧情阶段（优化版）
+            stages: [
+                {
+                    text: "公元前359年，你（商鞅）来到秦国，秦孝公渴望变法图强，召见了你。你需要向秦孝公阐述变法主张，你会选择：",
+                    choices: [
+                        {
+                            text: "主张激进改革，全面废除旧制，彻底推行新法",
+                            effects: {popularity: -10, nationalPower: 5, nobleSatisfaction: -20, military: 5, trust: 5},
+                            result: "秦孝公欣赏你的魄力，但旧贵族对你极为不满，民间也有不少反对声音。",
+                            history: "商鞅第一次变法（前359年）核心是：颁布《垦草令》、奖励军功、重农抑商、推行连坐法，直接触动了旧贵族的世袭特权。"
+                        },
+                        {
+                            text: "主张温和改革，循序渐进，先易后难",
+                            effects: {popularity: 5, nationalPower: 5, nobleSatisfaction: 0, military: 0, trust: -5},
+                            result: "秦孝公认可你的稳健，但认为改革力度不足，难以快速强国。",
+                            history: "秦孝公求贤令中明确提出“有能出奇计强秦者，吾且尊官，与之分土”，他迫切希望快速改变秦国积弱的局面。"
+                        },
+                        {
+                            text: "先解决军事问题，优先推行军功爵制",
+                            effects: {popularity: 0, nationalPower: 0, nobleSatisfaction: -10, military: 15, trust: 10},
+                            result: "秦孝公非常满意你的军事主张，军队开始支持变法，但旧贵族因世袭特权受威胁而反对。",
+                            history: "军功爵制打破了“世卿世禄”制，规定“有功者显荣，无功者虽富无所芬华”，极大提升了秦军战斗力。"
+                        }
+                    ]
+                },
+                {
+                    text: "你决定颁布《垦草令》，鼓励农耕，发展农业。对于执行方式，你选择：",
+                    choices: [
+                        {
+                            text: "严厉执行，对弃农经商者重罚，奖励垦荒农民",
+                            effects: {popularity: -5, nationalPower: 15, nobleSatisfaction: -5, military: 5, trust: 5},
+                            result: "农业生产大幅提升，秦国粮食储备增加，但部分百姓因处罚过重而不满。",
+                            history: "《垦草令》是商鞅变法的第一道政令，核心是重农抑商，禁止商人经营粮食买卖，提高酒肉税率，迫使商人回归农业。"
+                        },
+                        {
+                            text: "温和推行，主要以奖励为主，不做过多惩罚",
+                            effects: {popularity: 10, nationalPower: 5, nobleSatisfaction: 5, military: 0, trust: 0},
+                            result: "百姓支持度提升，但农业发展速度较慢，粮食增长有限。",
+                            history: "商鞅认为“国之所以兴者，农战也”，只有让百姓专心务农、勇于作战，国家才能强大，因此他的政策整体偏严苛。"
+                        },
+                        {
+                            text: "强制迁徙，将闲散人口迁往边疆垦荒",
+                            effects: {popularity: -15, nationalPower: 10, nobleSatisfaction: 5, military: 10, trust: -5},
+                            result: "边疆开发加快，军粮供应改善，但大量百姓被迫迁徙，民怨沸腾。",
+                            history: "秦国地广人稀，商鞅通过强制迁徙政策开发边疆，为后来东出函谷关提供了充足的粮食和战略缓冲。"
+                        }
+                    ]
+                },
+                {
+                    text: "你准备废除世卿世禄制，按军功授予爵位。面对旧贵族的反对，你选择：",
+                    choices: [
+                        {
+                            text: "强硬推行，直接废除旧制，斩杀反对的贵族代表",
+                            effects: {popularity: 0, nationalPower: 10, nobleSatisfaction: -30, military: 20, trust: 10},
+                            result: "军功爵制得以推行，军队战斗力大幅提升，但贵族对你恨之入骨，开始密谋报复。",
+                            history: "商鞅曾在渭水边一日处决700余名反对变法的旧贵族，虽震慑了反对势力，但也为自己埋下了杀身之祸。"
+                        },
+                        {
+                            text: "折中方案，保留部分贵族特权，逐步推行新制",
+                            effects: {popularity: 5, nationalPower: 5, nobleSatisfaction: -10, military: 10, trust: 5},
+                            result: "改革得以推进，但不够彻底，军队积极性提升有限，贵族仍有不满。",
+                            history: "秦国旧贵族以甘龙、杜挚为代表，主张“法古无过，循礼无邪”，与商鞅的“治世不一道，便国不法古”形成尖锐对立。"
+                        },
+                        {
+                            text: "暂缓推行，先巩固其他改革成果",
+                            effects: {popularity: 0, nationalPower: 0, nobleSatisfaction: 10, military: -5, trust: -15},
+                            result: "贵族暂时满意，但军队士气低落，秦孝公对你的犹豫不决感到失望。",
+                            history: "秦孝公是商鞅变法的最大支持者，他的去世（前338年）直接导致商鞅失去政治庇护，最终被车裂。"
+                        }
+                    ]
+                },
+                {
+                    text: "你决定在秦国推行郡县制，加强中央集权。对于地方官员任命，你选择：",
+                    choices: [
+                        {
+                            text: "全部由中央直接任命，罢免所有世袭地方官",
+                            effects: {popularity: -5, nationalPower: 20, nobleSatisfaction: -20, military: 5, trust: 10},
+                            result: "中央集权大大加强，政令通行无阻，但地方旧势力反抗激烈。",
+                            history: "商鞅将秦国划分为31个县，县令由国君直接任免，彻底废除了分封制，加强了中央对地方的控制。"
+                        },
+                        {
+                            text: "新旧结合，保留部分贤能旧官，任命部分新派官员",
+                            effects: {popularity: 5, nationalPower: 10, nobleSatisfaction: -5, military: 0, trust: 5},
+                            result: "改革平稳推进，中央与地方关系缓和，但集权效果打了折扣。",
+                            history: "郡县制是中国古代政治制度的重大变革，为后来秦始皇全面推行郡县制奠定了基础。"
+                        },
+                        {
+                            text: "先在部分地区试点，成功后再全面推广",
+                            effects: {popularity: 10, nationalPower: 5, nobleSatisfaction: 0, military: 0, trust: 0},
+                            result: "试点地区效果良好，百姓支持，但改革进度缓慢，秦孝公希望加快步伐。",
+                            history: "商鞅变法是一次性全面推行，而非渐进式改革，这也是其能快速见效但反对声巨大的原因。"
+                        }
+                    ]
+                },
+                {
+                    text: "你决定统一秦国度量衡，规范市场交易。执行过程中遇到阻力，你选择：",
+                    choices: [
+                        {
+                            text: "严格统一，销毁所有旧度量衡器具，违者重罚",
+                            effects: {popularity: -5, nationalPower: 15, nobleSatisfaction: -10, military: 0, trust: 5},
+                            result: "度量衡迅速统一，商业交易更加规范，国家税收增加，但商户损失较大。",
+                            history: "商鞅统一的度量衡标准被秦始皇继承，成为中国古代大一统的重要象征，现存的“商鞅方升”是重要物证。"
+                        },
+                        {
+                            text: "逐步替换，允许旧器具过渡期使用",
+                            effects: {popularity: 5, nationalPower: 5, nobleSatisfaction: 0, military: 0, trust: 0},
+                            result: "商户接受度高，社会稳定，但统一进程缓慢，效果延迟显现。",
+                            history: "统一度量衡不仅便利了商业交易，更重要的是便于国家征收赋税，加强了中央对经济的控制。"
+                        },
+                        {
+                            text: "仅在官方交易中使用，民间暂不强制",
+                            effects: {popularity: 10, nationalPower: 5, nobleSatisfaction: 5, military: 0, trust: -5},
+                            result: "几乎没有反对声音，但度量衡统一效果有限，未能充分发挥作用。",
+                            history: "商鞅变法的核心是“壹刑”“壹赏”“壹教”，强调全国政令统一，不允许有例外情况。"
+                        }
+                    ]
+                },
+                {
+                    text: "秦孝公去世，秦惠文王即位，旧贵族趁机诬陷你谋反。你选择：",
+                    choices: [
+                        {
+                            text: "起兵反抗，依靠新法受益的军民支持",
+                            effects: {popularity: 10, nationalPower: -20, nobleSatisfaction: -20, military: 10, trust: 0},
+                            result: "你组织了反抗力量，但最终寡不敌众，战败被杀。",
+                            history: "商鞅逃亡至边关，因自己制定的“无凭证不得留宿”的法律被旅店拒绝收留，最终被秦军捕获。"
+                        },
+                        {
+                            text: "逃亡他国，保全性命以图东山再起",
+                            effects: {popularity: -10, nationalPower: -10, nobleSatisfaction: 10, military: -5, trust: 0},
+                            result: "你试图逃亡，但因自己制定的连坐法被识破，最终被捕。",
+                            history: "商鞅曾逃至魏国，但因早年率领秦军击败魏国，被魏国拒绝收留，无奈返回秦国。"
+                        },
+                        {
+                            text: "主动请罪，希望以自身牺牲保全新法",
+                            effects: {popularity: 5, nationalPower: 0, nobleSatisfaction: 15, military: 0, trust: 0},
+                            result: "你被处以车裂之刑，但新法因已深入人心得以保留。",
+                            history: "秦惠文王虽处死商鞅，但继续推行新法，因为他认识到新法能让秦国强大，这也是商鞅变法的真正成功。"
+                        }
+                    ]
+                }
+            ],
+            // 随机事件配置
+            randomEvents: [
+                {
+                    title: "天灾来袭",
+                    text: "秦国关中地区遭遇大旱，粮食减产严重，百姓生活困苦。你将如何应对？",
+                    choices: [
+                        {
+                            text: "开仓放粮，救济灾民",
+                            effects: {popularity: 20, nationalPower: -10, nobleSatisfaction: -5, military: 0, trust: 5}
+                        },
+                        {
+                            text: "组织抗旱，兴修水利",
+                            effects: {popularity: 10, nationalPower: 5, nobleSatisfaction: -10, military: 0, trust: 10}
+                        },
+                        {
+                            text: "向贵族借粮，承诺事后加倍偿还",
+                            effects: {popularity: -5, nationalPower: 0, nobleSatisfaction: 15, military: 0, trust: -5}
+                        }
+                    ]
+                },
+                {
+                    title: "六国干涉",
+                    text: "东方六国担心秦国变强，联合派遣使者施压，要求秦国停止变法。你将如何应对？",
+                    choices: [
+                        {
+                            text: "强硬回击，整军备战",
+                            effects: {popularity: -5, nationalPower: 0, nobleSatisfaction: -10, military: 15, trust: 10}
+                        },
+                        {
+                            text: "暂时妥协，暗中继续变法",
+                            effects: {popularity: 0, nationalPower: 5, nobleSatisfaction: 5, military: -5, trust: -5}
+                        },
+                        {
+                            text: "分化六国，与齐国结盟",
+                            effects: {popularity: 5, nationalPower: 10, nobleSatisfaction: 0, military: 5, trust: 5}
+                        }
+                    ]
+                },
+                {
+                    title: "贵族叛乱",
+                    text: "旧贵族暗中勾结，煽动地方叛乱，试图推翻新法。你将如何应对？",
+                    choices: [
+                        {
+                            text: "派兵镇压，严惩叛乱者",
+                            effects: {popularity: -10, nationalPower: 5, nobleSatisfaction: -20, military: 10, trust: 10}
+                        },
+                        {
+                            text: "安抚为主，赦免从犯",
+                            effects: {popularity: 10, nationalPower: 0, nobleSatisfaction: -5, military: -5, trust: 0}
+                        },
+                        {
+                            text: "借力打力，让秦孝公出面平叛",
+                            effects: {popularity: 5, nationalPower: 5, nobleSatisfaction: -10, military: 5, trust: 15}
+                        }
+                    ]
+                },
+                {
+                    title: "历史问答",
+                    text: "秦孝公向你提问：以下哪项不是商鞅变法的内容？",
+                    choices: [
+                        {
+                            text: "废除井田制，承认土地私有",
+                            effects: {popularity: 5, nationalPower: 5, nobleSatisfaction: 5, military: 5, trust: 5},
+                            isCorrect: false,
+                            feedback: "答错了！废除井田制是商鞅变法的重要内容，允许土地买卖，极大激发了农民的生产积极性。"
+                        },
+                        {
+                            text: "推行科举制，选拔寒门子弟",
+                            effects: {popularity: 10, nationalPower: 10, nobleSatisfaction: 10, military: 10, trust: 10},
+                            isCorrect: true,
+                            feedback: "答对了！科举制始于隋朝，商鞅变法时期主要通过军功和才能选拔官员。"
+                        },
+                        {
+                            text: "实行连坐法，强化社会治安",
+                            effects: {popularity: 5, nationalPower: 5, nobleSatisfaction: 5, military: 5, trust: 5},
+                            isCorrect: false,
+                            feedback: "答错了！连坐法是商鞅变法的重要内容，一人犯法，邻里、家属都要受牵连，强化了社会控制。"
+                        }
+                    ]
+                }
+            ]
+        };
+
+        // DOM元素
+        const elements = {
+            popularity: document.getElementById('popularity'),
+            nationalPower: document.getElementById('national-power'),
+            nobleSatisfaction: document.getElementById('noble-satisfaction'),
+            military: document.getElementById('military'),
+            trustValue: document.getElementById('trust-value'),
+            popularityBar: document.getElementById('popularity-bar'),
+            nationalPowerBar: document.getElementById('national-power-bar'),
+            nobleSatisfactionBar: document.getElementById('noble-satisfaction-bar'),
+            militaryBar: document.getElementById('military-bar'),
+            storyText: document.getElementById('story-text'),
+            choiceButtons: document.getElementById('choice-buttons'),
+            resultBox: document.getElementById('result-box'),
+            nextBtn: document.getElementById('next-btn'),
+            gameOver: document.getElementById('game-over'),
+            gameContent: document.getElementById('game-content'),
+            endTitle: document.getElementById('end-title'),
+            endScore: document.getElementById('end-score'),
+            endText: document.getElementById('end-text'),
+            restartBtn: document.getElementById('restart-btn'),
+            overlay: document.getElementById('overlay'),
+            randomEvent: document.getElementById('random-event'),
+            eventTitle: document.getElementById('event-title'),
+            eventText: document.getElementById('event-text'),
+            eventBtn1: document.getElementById('event-btn1'),
+            eventBtn2: document.getElementById('event-btn2'),
+            eventBtn3: document.getElementById('event-btn3')
+        };
+
+        // 初始化游戏
+        function initGame() {
+            gameState.stage = 1;
+            gameState.stats = {
+                popularity: 50,
+                nationalPower: 30,
+                nobleSatisfaction: 70,
+                military: 40,
+                trust: 80
+            };
+            updateStatsDisplay();
+            renderStage();
+            elements.gameOver.style.display = 'none';
+            elements.gameContent.style.display = 'block';
+            elements.overlay.style.display = 'none';
+            elements.randomEvent.style.display = 'none';
+        }
+
+        // 更新数值显示（优化：添加进度条动画）
+        function updateStatsDisplay() {
+            // 更新数字显示
+            elements.popularity.textContent = gameState.stats.popularity;
+            elements.nationalPower.textContent = gameState.stats.nationalPower;
+            elements.nobleSatisfaction.textContent = gameState.stats.nobleSatisfaction;
+            elements.military.textContent = gameState.stats.military;
+            elements.trustValue.textContent = gameState.stats.trust;
+            
+            // 更新进度条
+            elements.popularityBar.style.width = `${gameState.stats.popularity}%`;
+            elements.nationalPowerBar.style.width = `${gameState.stats.nationalPower}%`;
+            elements.nobleSatisfactionBar.style.width = `${gameState.stats.nobleSatisfaction}%`;
+            elements.militaryBar.style.width = `${gameState.stats.military}%`;
+            
+            // 数值边界限制
+            for (const key in gameState.stats) {
+                gameState.stats[key] = Math.max(0, Math.min(100, gameState.stats[key]));
+            }
+        }
+
+        // 渲染当前阶段
+        function renderStage() {
+            const currentStage = gameState.stages[gameState.stage - 1];
+            
+            // 更新剧情文本
+            elements.storyText.textContent = currentStage.text;
+            
+            // 清空并创建选项按钮
+            elements.choiceButtons.innerHTML = '';
+            currentStage.choices.forEach((choice, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn';
+                btn.dataset.choiceIndex = index;
+                btn.textContent = choice.text;
+                btn.addEventListener('click', () => handleChoice(index));
+                elements.choiceButtons.appendChild(btn);
+            });
+            
+            // 重置结果框和下一关按钮
+            elements.resultBox.style.display = 'none';
+            elements.nextBtn.style.display = 'none';
+            
+            // 随机触发事件（30%概率）
+            if (gameState.stage < 6 && Math.random() < 0.3) {
+                setTimeout(showRandomEvent, 1000);
+            }
+        }
+
+        // 显示随机事件
+        function showRandomEvent() {
+            // 随机选择一个事件
+            const randomIdx = Math.floor(Math.random() * gameState.randomEvents.length);
+            const event = gameState.randomEvents[randomIdx];
+            
+            // 更新事件内容
+            elements.eventTitle.textContent = event.title;
+            elements.eventText.textContent = event.text;
+            
+            // 绑定事件按钮
+            elements.eventBtn1.textContent = event.choices[0].text;
+            elements.eventBtn2.textContent = event.choices[1].text;
+            elements.eventBtn3.textContent = event.choices[2].text;
+            
+            // 事件按钮点击处理
+            elements.eventBtn1.onclick = () => handleEventChoice(event.choices[0]);
+            elements.eventBtn2.onclick = () => handleEventChoice(event.choices[1]);
+            elements.eventBtn3.onclick = () => handleEventChoice(event.choices[2]);
+            
+            // 显示事件弹窗
+            elements.overlay.style.display = 'block';
+            elements.randomEvent.style.display = 'block';
+        }
+
+        // 处理随机事件选择
+        function handleEventChoice(choice) {
+            // 应用数值变化
+            gameState.stats.popularity += choice.effects.popularity || 0;
+            gameState.stats.nationalPower += choice.effects.nationalPower || 0;
+            gameState.stats.nobleSatisfaction += choice.effects.nobleSatisfaction || 0;
+            gameState.stats.military += choice.effects.military || 0;
+            gameState.stats.trust += choice.effects.trust || 0;
+            
+            // 更新显示
+            updateStatsDisplay();
+            
+            // 显示问答反馈（如果是问答事件）
+            if (choice.feedback) {
+                alert(choice.feedback);
+            }
+            
+            // 关闭事件弹窗
+            elements.overlay.style.display = 'none';
+            elements.randomEvent.style.display = 'none';
+        }
+
+        // 处理玩家选择
+        function handleChoice(choiceIndex) {
+            const currentStage = gameState.stages[gameState.stage - 1];
+            const choice = currentStage.choices[choiceIndex];
+            
+            // 应用数值变化
+            gameState.stats.popularity += choice.effects.popularity;
+            gameState.stats.nationalPower += choice.effects.nationalPower;
+            gameState.stats.nobleSatisfaction += choice.effects.nobleSatisfaction;
+            gameState.stats.military += choice.effects.military;
+            gameState.stats.trust += choice.effects.trust;
+            
+            // 确保数值在0-100之间
+            updateStatsDisplay();
+            
+            // 显示结果（包含历史知识）
+            elements.resultBox.innerHTML = `
+                <p>${choice.result}</p>
+                <div class="history-tip">
+                    <h4>📜 历史小知识</h4>
+                    <p>${choice.history}</p>
+                </div>
+            `;
+            elements.resultBox.style.display = 'block';
+            
+            // 显示下一关按钮
+            elements.nextBtn.style.display = 'block';
+            
+            // 禁用所有选项按钮
+            const buttons = elements.choiceButtons.querySelectorAll('.choice-btn');
+            buttons.forEach(btn => btn.disabled = true);
+            
+            // 绑定下一关按钮事件
+            elements.nextBtn.onclick = nextStage;
+        }
+
+        // 进入下一关
+        function nextStage() {
+            gameState.stage++;
+            
+            // 检查游戏是否结束
+            if (gameState.stage > gameState.stages.length) {
+                endGame();
+                return;
+            }
+            
+            // 检查是否游戏失败（新增：信任度为0也失败）
+            if (checkGameOver()) {
+                showGameOver(false);
+                return;
+            }
+            
+            // 渲染下一关
+            renderStage();
+        }
+
+        // 检查游戏是否失败
+        function checkGameOver() {
+            // 任意数值为0或信任度低于20则失败
+            return gameState.stats.popularity <= 0 || 
+                   gameState.stats.nationalPower <= 0 || 
+                   gameState.stats.nobleSatisfaction <= 0 || 
+                   gameState.stats.military <= 0 ||
+                   gameState.stats.trust <= 20;
+        }
+
+        // 游戏结束处理（优化：多结局分支）
+        function endGame() {
+            // 计算总分
+            const totalScore = 
+                gameState.stats.popularity + 
+                gameState.stats.nationalPower + 
+                gameState.stats.nobleSatisfaction + 
+                gameState.stats.military;
+            
+            elements.endScore.textContent = `总分：${totalScore}`;
+            
+            // 多结局判断
+            if (totalScore >= 240) {
+                // 完美结局
+                elements.endTitle.textContent = "变法大成";
+                elements.endText.textContent = `你以高超的政治智慧平衡了各方利益，虽然最终被车裂，但新法不仅得以保留，还被秦惠文王发扬光大。秦国自此国力空前强盛，数十年后，秦始皇凭借你奠定的基础统一了六国，你也成为了中国历史上最伟大的改革家之一。`;
+            } else if (totalScore >= 200) {
+                // 成功结局
+                elements.endTitle.textContent = "变法成功";
+                elements.endText.textContent = `你的改革虽触动了旧势力的利益，导致自己惨遭车裂，但新法已深入人心，秦国因此逐渐强大，为后来统一六国奠定了坚实基础。你的名字将永远铭刻在秦国崛起的历史丰碑上。`;
+            } else if (totalScore >= 160) {
+                // 折中结局
+                elements.endTitle.textContent = "变法半成";
+                elements.endText.textContent = `你的改革过于保守，未能充分发挥新法的威力。虽然秦国有所发展，但统一六国的进程被大大推迟。你虽保住了性命，却被罢免官职，最终在失意中度过余生。`;
+            } else {
+                // 失败结局
+                elements.endTitle.textContent = "变法失败";
+                elements.endText.textContent = `你的改革未能平衡各方利益，既失去了秦孝公的信任，又遭到旧贵族和百姓的反对。新法被全面废除，你被处以车裂之刑，秦国错失了变强的最佳时机，继续在六国的夹缝中艰难求生。`;
+            }
+            
+            showGameOver(true);
+        }
+
+        // 显示游戏结束界面
+        function showGameOver(isFinal) {
+            elements.gameContent.style.display = 'none';
+            elements.gameOver.style.display = 'block';
+        }
+
+        // 重新开始游戏
+        elements.restartBtn.addEventListener('click', initGame);
+
+        // 初始化游戏
+        initGame();
+    </script>
+</body>
+</html>
